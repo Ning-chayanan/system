@@ -274,7 +274,6 @@
                 window.appState.currentUser.name = fn;
                 window.appState.currentUser.role = pos;
                 
-                // บันทึก Audit Log การเข้าสู่ระบบ
                 window.appState.auditLogs.unshift({
                     timestamp: new Date().toLocaleString('th-TH'),
                     username: window.appState.currentUser.username,
@@ -288,6 +287,68 @@
             } else {
                 alert("กรุณากรอกชื่อ-นามสกุลและตำแหน่งให้ครบถ้วน");
             }
+        };
+
+        window.updateSuperAdminCredentials = function(event) {
+            event.preventDefault();
+            var currentAdmin = window.appState.currentUser;
+            if(!currentAdmin || currentAdmin.username !== 'admin') {
+                alert("❌ เฉพาะแอดมินผู้ดูแลระบบสูงสุด (Super Admin) เท่านั้นที่มีสิทธิ์เปลี่ยนผู้ดูแลระบบหรือรหัสผ่านสูงสุด!");
+                return;
+            }
+
+            var oldPass = document.getElementById('super-old-pass').value.trim();
+            if(oldPass !== currentAdmin.pass) {
+                alert("❌ รหัสผ่านแอดมินสูงสุดปัจจุบันไม่ถูกต้อง!");
+                return;
+            }
+
+            var newUsername = document.getElementById('super-new-username').value.trim();
+            var newName = document.getElementById('super-new-name').value.trim();
+            var newPass = document.getElementById('super-new-pass').value.trim();
+            var confirmPass = document.getElementById('super-confirm-pass').value.trim();
+
+            if(newPass && newPass !== confirmPass) {
+                alert("❌ รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน!");
+                return;
+            }
+
+            // อัปเดตข้อมูลแอดมินสูงสุดคนเดียวในระบบ
+            currentAdmin.username = newUsername || currentAdmin.username;
+            currentAdmin.name = newName || currentAdmin.name;
+            if(newPass) {
+                currentAdmin.pass = newPass;
+            }
+
+            // ซ่อนรหัสผ่านเริ่มต้นหลังจากเปลี่ยนหรือเข้าสู่ระบบแล้ว
+            window.appState.superAdminConfigured = true;
+
+            alert("✅ อัปเดตข้อมูลแอดมินผู้ดูแลระบบสูงสุดเรียบร้อยแล้ว!");
+            document.getElementById('super-old-pass').value = '';
+            document.getElementById('super-new-pass').value = '';
+            document.getElementById('super-confirm-pass').value = '';
+            renderActiveTab();
+        };
+
+        window.updateMyPassword = function(event) {
+            event.preventDefault();
+            var user = window.appState.currentUser;
+            var oldP = document.getElementById('my-old-pass').value.trim();
+            var newP = document.getElementById('my-new-pass').value.trim();
+
+            if(oldP !== user.pass) {
+                alert("❌ รหัสผ่านปัจจุบันไม่ถูกต้อง!");
+                return;
+            }
+            if(newP.length < 6) {
+                alert("❌ รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร");
+                return;
+            }
+
+            user.pass = newP;
+            alert("✅ เปลี่ยนรหัสผ่านส่วนตัวเรียบร้อยแล้ว!");
+            document.getElementById('my-old-pass').value = '';
+            document.getElementById('my-new-pass').value = '';
         };
 
         function completeLoginSuccess(user) {
@@ -445,12 +506,73 @@
                     </tr>
                 `).join('') : `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 text-xs">ยังไม่มีประวัติการเข้าสู่ระบบในเซสชันนี้</td></tr>`;
 
+                let isAdmin = window.appState.currentUser && window.appState.currentUser.username === 'admin';
+                let superAdminSection = isAdmin ? `
+                    <div class="bg-amber-50 border border-amber-200 p-6 rounded-2xl shadow-sm space-y-4">
+                        <h3 class="font-bold text-sm text-amber-900"><i class="fa-solid fa-crown text-amber-600 mr-2"></i> จัดการแอดมินผู้ดูแลระบบสูงสุด (Super Admin - มีได้คนเดียวเท่านั้น)</h3>
+                        <p class="text-xs text-amber-700">การเปลี่ยนสิทธิ์หรือยูเซอร์แอดมินสูงสุด จำเป็นต้องใช้รหัสผ่านแอดมินสูงสุดปัจจุบันยืนยัน และรหัสผ่านเริ่มต้นจะไม่แสดงผลอีกต่อไป</p>
+                        <form onsubmit="updateSuperAdminCredentials(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่านแอดมินสูงสุดปัจจุบัน (จำเป็น)</label>
+                                <input type="password" id="super-old-pass" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white" placeholder="ระบุรหัสผ่านปัจจุบัน">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อผู้ใช้งานใหม่ (Username)</label>
+                                <input type="text" id="super-new-username" value="${window.appState.currentUser.username}" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อ - นามสกุลจริง แอดมินสูงสุด</label>
+                                <input type="text" id="super-new-name" value="${window.appState.currentUser.name}" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่านใหม่ (ปล่อยว่างหากไม่เปลี่ยน)</label>
+                                <input type="password" id="super-new-pass" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white" placeholder="รหัสผ่านใหม่">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">ยืนยันรหัสผ่านใหม่</label>
+                                <input type="password" id="super-confirm-pass" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white" placeholder="ยืนยันรหัสผ่านใหม่">
+                            </div>
+                            <div class="flex items-end">
+                                <button type="submit" class="w-full py-2.5 bg-amber-700 hover:bg-amber-800 text-white font-semibold rounded-xl shadow text-xs transition flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-shield-cat"></i> อัปเดตสิทธิ์แอดมินสูงสุด
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                ` : `
+                    <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl text-xs text-slate-600">
+                        <i class="fa-solid fa-circle-info text-blue-600 mr-1"></i> เฉพาะผู้ใช้งานในบทบาท <b>แอดมินผู้ดูแลระบบสูงสุด</b> เท่านั้น ที่สามารถแก้ไขหรือโอนย้ายสิทธิ์แอดมินสูงสุดได้
+                    </div>
+                `;
+
                 container.innerHTML = `
                     <div class="space-y-6">
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-                            <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-users-gear text-emerald-600 mr-2"></i> ตั้งค่าข้อมูลหน่วยงาน & ตรวจสอบประวัติการเข้าใช้งาน (Audit Log)</h2>
-                            <p class="text-xs text-slate-500">ตรวจสอบว่าใครเข้าสู่ระบบ ชื่ออะไร และเข้าใช้งานเวลาใด เพื่อความโปร่งใสในการตรวจสอบ</p>
+                            <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-users-gear text-emerald-600 mr-2"></i> ตั้งค่าความปลอดภัยผู้ใช้งานและหน่วยงาน</h2>
+                            <p class="text-xs text-slate-500">จัดการรหัสผ่านส่วนตัวและควบคุมสิทธิ์ผู้ดูแลระบบสูงสุดของสถานศึกษา</p>
                         </div>
+
+                        ${superAdminSection}
+
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                            <h3 class="font-bold text-sm text-slate-800"><i class="fa-solid fa-key text-emerald-600 mr-2"></i> เปลี่ยนรหัสผ่านส่วนตัว (${window.appState.currentUser.name})</h3>
+                            <form onsubmit="updateMyPassword(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-xl">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสผ่านปัจจุบัน</label>
+                                    <input type="password" id="my-old-pass" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" placeholder="รหัสผ่านเดิม">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสผ่านใหม่ (อย่างน้อย 6 หลัก)</label>
+                                    <input type="password" id="my-new-pass" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" placeholder="รหัสผ่านใหม่">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <button type="submit" class="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-xl text-xs shadow transition">
+                                        <i class="fa-solid fa-floppy-disk"></i> บันทึกรหัสผ่านใหม่
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-6">
                             <h3 class="font-bold text-sm text-slate-800 mb-3"><i class="fa-solid fa-clipboard-user text-emerald-600 mr-2"></i> ประวัติการเข้าใช้งานล่าสุด (Audit Trail)</h3>
                             <div class="overflow-x-auto">
