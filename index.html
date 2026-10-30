@@ -44,8 +44,11 @@
             <h1 class="text-xl font-bold text-slate-900">ระบบป้องกันคนนอกเข้าใช้งาน</h1>
             <p class="text-xs text-slate-500 mt-1 mb-6">กรุณาระบุรหัสผ่านความปลอดภัย (PIN 4 หลัก) เพื่อปลดล็อกเข้าสู่ระบบงบประมาณและพัสดุ</p>
             
-            <div class="mb-4">
-                <input type="password" id="access-pin-input" maxlength="4" class="w-full text-center text-2xl tracking-widest px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-mono bg-slate-50" placeholder="••••">
+            <div class="mb-4 relative">
+                <input type="password" id="access-pin-input" maxlength="4" class="w-full text-center text-2xl tracking-widest px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-mono bg-slate-50 pr-12" placeholder="••••">
+                <button type="button" onclick="togglePasswordVisibility('access-pin-input', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-2">
+                    <i class="fa-solid fa-eye text-sm"></i>
+                </button>
             </div>
             <button onclick="verifyAccessPin()" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 text-sm">
                 <i class="fa-solid fa-key"></i> ยืนยันรหัสผ่านเข้าสู่ระบบ
@@ -81,7 +84,12 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">รหัสผ่าน (Password)</label>
-                    <input type="password" id="login-password" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-600 text-sm bg-slate-50" placeholder="ระบุรหัสผ่าน (ค่าเริ่มต้น: Admin1234)">
+                    <div class="relative">
+                        <input type="password" id="login-password" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-600 text-sm bg-slate-50 pr-12" placeholder="ระบุรหัสผ่าน (ค่าเริ่มต้น: Admin1234)">
+                        <button type="button" onclick="togglePasswordVisibility('login-password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-2">
+                            <i class="fa-solid fa-eye text-sm"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="flex items-center justify-between text-xs text-slate-500">
                     <label class="flex items-center gap-2 cursor-pointer">
@@ -521,7 +529,10 @@
                         <form onsubmit="updateSuperAdminCredentials(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่านแอดมินสูงสุดปัจจุบัน (จำเป็น)</label>
-                                <input type="password" id="super-old-pass" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white" placeholder="ระบุรหัสผ่านปัจจุบัน">
+                                <div class="relative">
+                                    <input type="password" id="super-old-pass" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white pr-10" placeholder="รหัสผ่านปัจจุบัน">
+                                    <button type="button" onclick="togglePasswordVisibility('super-old-pass', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1.5"><i class="fa-solid fa-eye text-xs"></i></button>
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อผู้ใช้งานใหม่ (Username)</label>
@@ -533,11 +544,17 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่านใหม่ (ปล่อยว่างหากไม่เปลี่ยน)</label>
-                                <input type="password" id="super-new-pass" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white" placeholder="รหัสผ่านใหม่">
+                                <div class="relative">
+                                    <input type="password" id="super-new-pass" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white pr-10" placeholder="รหัสผ่านใหม่">
+                                    <button type="button" onclick="togglePasswordVisibility('super-new-pass', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1.5"><i class="fa-solid fa-eye text-xs"></i></button>
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1">ยืนยันรหัสผ่านใหม่</label>
-                                <input type="password" id="super-confirm-pass" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white" placeholder="ยืนยันรหัสผ่านใหม่">
+                                <div class="relative">
+                                    <input type="password" id="super-confirm-pass" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white pr-10" placeholder="ยืนยันรหัสผ่านใหม่">
+                                    <button type="button" onclick="togglePasswordVisibility('super-confirm-pass', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1.5"><i class="fa-solid fa-eye text-xs"></i></button>
+                                </div>
                             </div>
                             <div class="flex items-end">
                                 <button type="submit" class="w-full py-2.5 bg-amber-700 hover:bg-amber-800 text-white font-semibold rounded-xl shadow text-xs transition flex items-center justify-center gap-2">
@@ -562,11 +579,17 @@
                             <form onsubmit="updateMyPassword(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-xl">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสผ่านปัจจุบัน</label>
-                                    <input type="password" id="my-old-pass" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" placeholder="รหัสผ่านเดิม">
+                                    <div class="relative">
+                                        <input type="password" id="my-old-pass" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm pr-10" placeholder="รหัสผ่านเดิม">
+                                        <button type="button" onclick="togglePasswordVisibility('my-old-pass', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1.5"><i class="fa-solid fa-eye text-xs"></i></button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสผ่านใหม่ (อย่างน้อย 6 หลัก)</label>
-                                    <input type="password" id="my-new-pass" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" placeholder="รหัสผ่านใหม่">
+                                    <div class="relative">
+                                        <input type="password" id="my-new-pass" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm pr-10" placeholder="รหัสผ่านใหม่">
+                                        <button type="button" onclick="togglePasswordVisibility('my-new-pass', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1.5"><i class="fa-solid fa-eye text-xs"></i></button>
+                                    </div>
                                 </div>
                                 <div class="md:col-span-2">
                                     <button type="submit" class="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-xl text-xs shadow transition">
@@ -603,6 +626,18 @@
                         <p class="text-xs text-slate-500 mt-1">สามารถเลือกใช้งานเมนูอื่นๆ ด้านบนได้ปกติครับ</p>
                     </div>
                 `;
+            }
+        };
+
+        window.togglePasswordVisibility = function(inputId, btn) {
+            var input = document.getElementById(inputId);
+            var icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa-solid fa-eye-slash text-sm';
+            } else {
+                input.type = 'password';
+                icon.className = 'fa-solid fa-eye text-sm';
             }
         };
 
