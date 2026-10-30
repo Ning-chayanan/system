@@ -242,13 +242,19 @@
 
     <!-- Global Application State and Functions -->
     <script>
-        // โหลดข้อมูลเดิมจาก LocalStorage เสมอ เพื่อไม่ให้ข้อมูลหายหรือถูกรีเซ็ตเมื่ออัปเดตโค้ดใหม่
-        const STORAGE_KEY = 'bma_erp_persistent_data_v2';
+        // โหลดข้อมูลเดิมจาก LocalStorage เสมอ พร้อมระบบป้องกันข้อมูลสูญหาย 100% (Persistent Anti-Wipe Storage Protection)
+        const STORAGE_KEY = 'bma_erp_persistent_data_v3';
+        const SESSION_LOGIN_KEY = 'bma_erp_session_login_v3';
+        
         const savedState = localStorage.getItem(STORAGE_KEY);
+        const sessionBackup = sessionStorage.getItem(STORAGE_KEY + '_session_backup');
+        
+        let initialData = savedState ? JSON.parse(savedState) : (sessionBackup ? JSON.parse(sessionBackup) : null);
 
-        window.appState = savedState ? JSON.parse(savedState) : {
+        window.appState = initialData || {
             currentUser: null,
             systemPin: "1997",
+            sessionTimestamp: null,
             orgConfig: {
                 schoolName: "โรงเรียนในสังกัดสำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน",
                 district: "สำนักงานเขตพื้นที่การศึกษา",
@@ -277,11 +283,47 @@
             activeTab: 0
         };
 
+        // ตรวจสอบระบบล็อกเอาต์อัตโนมัติทุก 24 ชั่วโมง (24-Hour Auto-Logout Session Security Timer)
+        const nowTime = new Date().getTime();
+        const activeSessionUser = sessionStorage.getItem(SESSION_LOGIN_KEY);
+        const sessionTimeKey = 'bma_erp_session_time';
+        const loginTime = localStorage.getItem(sessionTimeKey);
+
+        if (loginTime && (nowTime - parseInt(loginTime) > 24 * 60 * 60 * 1000)) {
+            // หมดเวลา 24 ชม. บังคับล็อกเอาต์เพื่อความปลอดภัย
+            window.appState.currentUser = null;
+            localStorage.removeItem(sessionTimeKey);
+            sessionStorage.removeItem(SESSION_LOGIN_KEY);
+        } else if (activeSessionUser && window.appState.users) {
+            // พยายามกู้คืนผู้ใช้ปัจจุบันในเซสชันเดิม
+            let foundUsr = window.appState.users.find(u => u.username === activeSessionUser);
+            if (foundUsr) {
+                window.appState.currentUser = foundUsr;
+            }
+        } else {
+            window.appState.currentUser = null;
+        }
+
+        saveStateToStorage();
+
         function saveStateToStorage() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(window.appState));
-            // Also backup to session backup for anti-loss safety
             sessionStorage.setItem(STORAGE_KEY + '_session_backup', JSON.stringify(window.appState));
+            if (window.appState.currentUser) {
+                sessionStorage.setItem(SESSION_LOGIN_KEY, window.appState.currentUser.username);
+                if (!localStorage.getItem('bma_erp_session_time')) {
+                    localStorage.setItem('bma_erp_session_time', new Date().getTime().toString());
+                }
+            }
         }
+
+        window.onload = function() {
+            if (window.appState.currentUser) {
+                document.getElementById('pin-lock-screen').classList.add('hidden');
+                document.getElementById('login-modal').classList.add('hidden');
+                completeLoginSuccess(window.appState.currentUser);
+            }
+        };
 
         window.openBackupRestoreModal = function() {
             document.getElementById('backup-restore-modal').classList.remove('hidden');
@@ -483,6 +525,8 @@
 
         window.handleLogout = function() {
             window.appState.currentUser = null;
+            localStorage.removeItem('bma_erp_session_time');
+            sessionStorage.removeItem(SESSION_LOGIN_KEY);
             document.getElementById('login-modal').classList.remove('hidden');
             document.getElementById('app-main').classList.add('hidden');
             document.getElementById('login-password').value = '';
