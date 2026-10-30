@@ -35,8 +35,27 @@
 </head>
 <body class="text-slate-800 min-h-screen flex flex-col">
 
+    <!-- Pre-Login Security PIN Lock Screen (Mandatory First Screen) -->
+    <div id="pin-lock-screen" class="fixed inset-0 z-50 bg-slate-950 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 border border-slate-100 text-center">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-inner">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h1 class="text-xl font-bold text-slate-900">ระบบป้องกันคนนอกเข้าใช้งาน</h1>
+            <p class="text-xs text-slate-500 mt-1 mb-6">กรุณาระบุรหัสผ่านความปลอดภัย (PIN 4 หลัก) เพื่อปลดล็อกเข้าสู่ระบบงบประมาณและพัสดุ</p>
+            
+            <div class="mb-4">
+                <input type="password" id="access-pin-input" maxlength="4" class="w-full text-center text-2xl tracking-widest px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-mono bg-slate-50" placeholder="••••">
+            </div>
+            <button onclick="verifyAccessPin()" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 text-sm">
+                <i class="fa-solid fa-key"></i> ยืนยันรหัสผ่านเข้าสู่ระบบ
+            </button>
+            <p id="pin-error-msg" class="text-xs text-rose-600 mt-3 hidden">❌ รหัสผ่านความปลอดภัยไม่ถูกต้อง</p>
+        </div>
+    </div>
+
     <!-- Security Login Modal -->
-    <div id="login-modal" class="fixed inset-0 z-50 bg-slate-900/85 backdrop-blur-sm flex items-center justify-center p-4">
+    <div id="login-modal" class="fixed inset-0 z-50 bg-slate-900/85 backdrop-blur-sm flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border border-slate-100">
             <div class="text-center mb-6">
                 <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl shadow-inner">
@@ -68,6 +87,32 @@
         </div>
     </div>
 
+    <!-- First-Time Profile Setup Modal (Guaranteed Display) -->
+    <div id="profile-setup-modal" class="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 border border-slate-100">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-blue-100 text-blue-700 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl shadow-inner">
+                    <i class="fa-solid fa-user-pen"></i>
+                </div>
+                <h2 class="text-xl font-bold text-slate-900">ตั้งค่าการใช้งานเบื้องต้น (ครั้งแรก)</h2>
+                <p class="text-xs text-slate-500 mt-1">กรุณากรอกชื่อ-นามสกุลจริงและตำแหน่ง เพื่อนำไปออกหนังสือราชการอัตโนมัติ</p>
+            </div>
+            <form onsubmit="saveUserProfileSetup(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">ชื่อ - นามสกุลจริง (เช่น นายพัสดุ การเงินดี)</label>
+                    <input type="text" id="setup-fullname" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm" placeholder="ระบุชื่อ-นามสกุลจริง">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">ตำแหน่งปฏิบัติงาน (เช่น เจ้าหน้าที่พัสดุ / การเงิน)</label>
+                    <input type="text" id="setup-position" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm" placeholder="ระบุตำแหน่ง">
+                </div>
+                <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-floppy-disk"></i> บันทึกและเข้าสู่ระบบทันที
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Main App Container -->
     <div id="app-main" class="flex flex-col min-h-screen hidden">
         <!-- Top Navigation Header -->
@@ -79,7 +124,7 @@
                     </div>
                     <div>
                         <h2 id="top-school-name" class="font-bold text-base leading-tight">โรงเรียนในสังกัดสำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน</h2>
-                        <p class="text-xs text-slate-400">งบประมาณและพัสดุ (Cloud Live System)</p>
+                        <p class="text-xs text-slate-400">ระบบงบประมาณและพัสดุสถานศึกษา (Cloud Live System)</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
@@ -131,134 +176,120 @@
         </footer>
     </div>
 
-    <!-- Firebase SDK & Multi-User Cloud App Scripts -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        let app, db, auth, currentUserData = null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'school-erp-live';
-        
-        try {
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-                apiKey: "AIzaSyDummyKeyForStandaloneTesting",
-                authDomain: "school-erp.firebaseapp.com",
-                projectId: "school-erp",
-                storageBucket: "school-erp.appspot.com",
-                messagingSenderId: "123456789",
-                appId: "1:1234:web:abcd"
-            };
-            app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-        } catch(e) {
-            console.warn("Running in local offline fallback mode:", e);
-        }
-
+    <!-- Global Application State and Functions -->
+    <script>
         window.appState = {
             currentUser: null,
+            systemPin: "1997",
             orgConfig: {
-                schoolName: "โรงเรียนประชารัฐศึกษา",
-                district: "สำนักงานเขตพื้นที่การศึกษาประถมศึกษา",
-                schoolCode: "1000000000",
-                docPrefix: "ศธ",
-                address: "ประเทศไทย",
-                officerName: "นายพัสดุ การเงินดี",
-                directorName: "นายนโยบาย บริหารดี"
+                schoolName: "โรงเรียนในสังกัดสำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน",
+                district: "สำนักงานเขตพื้นที่การศึกษา",
+                docNo: "กท 0800",
+                officerName: "เจ้าหน้าที่พัสดุ และการเงิน",
+                directorName: "ผู้อำนวยการสถานศึกษา"
             },
-            users: [
-                { username: "admin", pass: "Admin1234", name: "ผู้ดูแลระบบสูงสุด", role: "Administrator" },
-                { username: "finance", pass: "Admin1234", name: "เจ้าหน้าที่การเงิน", role: "Finance" },
-                { username: "procurement", pass: "Admin1234", name: "เจ้าหน้าที่พัสดุ", role: "Procurement" },
-                { username: "director", pass: "Admin1234", name: "ผู้อำนวยการสถานศึกษา", role: "Director" }
-            ],
             budgets: [
-                { id: "B1", category: "งบอาหารกลางวันนักเรียน", allocated: 1200000, used: 450000, balance: 750000 },
-                { id: "B2", category: "งบอาหารเช้า/สนับสนุน", allocated: 600000, used: 200000, balance: 400000 },
-                { id: "B3", category: "งบพัฒนาคุณภาพผู้เรียน (เรียนฟรี)", allocated: 350000, used: 120000, balance: 230000 },
-                { id: "B4", category: "งบค่าวัสดุสำนักงาน/การศึกษา", allocated: 250000, used: 85000, balance: 165000 }
+                { id: 'B1', name: 'งบบุคลากร', total: 1200000, used: 0, balance: 1200000 },
+                { id: 'B2', name: 'งบดำเนินงาน (ค่าใช้จ่ายรายหัว)', total: 800000, used: 150000, balance: 650000 },
+                { id: 'B3', name: 'งบลงทุน (ค่าครุภัณฑ์/สิ่งก่อสร้าง)', total: 300000, used: 45000, balance: 255000 },
+                { id: 'B4', name: 'งบเงินอุดหนุนเฉพาะกิจ (พี่เลี้ยงเด็กพิการ)', total: 100000, used: 0, balance: 100000 }
             ],
             egpList: [
-                { id: "PR69-001", title: "จัดซื้อวัสดุสำนักงานประจำไตรมาส 1", budgetId: "B4", amount: 45000, vendor: "ร้านรวมพัสดุภัณฑ์", comp2: "บริษัท ดีดีเทรดดิ้ง จำกัด", comp3: "ห้างหุ้นส่วนจำกัด สามัคคีพัสดุ", tax1: 450, voucherNo: "ฎีกาเขต 102/2569", status: "เขตพื้นที่รับเรื่องแล้ว", edits: 0, photos: [] },
-                { id: "PR69-002", title: "จ้างเหมาบริการพี่เลี้ยงการศึกษาพิเศษ", budgetId: "B3", amount: 150000, vendor: "นางสาวสมใจ รักเรียน", comp2: "-", comp3: "-", tax1: 1500, voucherNo: "ฎีกาเขต 115/2569", status: "ดำเนินการเสร็จสิ้น", edits: 0, photos: [] }
+                { id: 'PR69-001', title: 'จัดซื้อวัสดุสำนักงานประจำปี', budgetId: 'B2', amount: 45000, vendor: 'ร้านรุ่งเรืองพาณิชย์', comp2: 'ร้านสหกิจการค้า', comp3: 'หจก. 108 ออฟฟิศ', tax1: 450, voucherNo: 'ฎีกาเขต 102/2569', status: 'อนุมัติเบิกจ่ายแล้ว', edits: 0, photos: [] },
+                { id: 'PR69-002', title: 'จ้างเหมาบริการพี่เลี้ยงเด็กพิการ', budgetId: 'B4', amount: 150000, vendor: 'นางสาวใจดี รักเรียน', comp2: '-', comp3: '-', tax1: 0, voucherNo: 'ฎีกาเขต 115/2569', status: 'รอเขตตรวจสอบ', edits: 0, photos: [] }
             ],
-            vendors: [
-                { name: "ร้านรวมพัสดุภัณฑ์", taxId: "1103700012345", address: "ประเทศไทย", totalBought: 45000, timesWon: 1 },
-                { name: "บริษัท ดีดีเทรดดิ้ง จำกัด", taxId: "0105555012345", address: "ประเทศไทย", totalBought: 0, timesWon: 0 }
-            ],
-            stocks: [
-                { code: "ST-01", name: "กระดาษ A4 80 แกรม", unit: "รีม", qty: 50, price: 120 },
-                { code: "ST-02", name: "ปากกาลูกลื่น น้ำเงิน", unit: "โหล", qty: 20, price: 60 }
+            auditLogs: [],
+            users: [
+                { username: 'admin', pass: 'Admin1234', role: 'แอดมินผู้ดูแลระบบสูงสุด', name: 'ผู้ดูแลระบบสูงสุด' },
+                { username: 'finance', pass: 'Admin1234', role: 'เจ้าหน้าที่การเงิน', name: 'เจ้าหน้าที่การเงิน' },
+                { username: 'procurement', pass: 'Admin1234', role: 'เจ้าหน้าที่พัสดุ', name: 'เจ้าหน้าที่พัสดุ' },
+                { username: 'director', pass: 'Admin1234', role: 'ผู้อำนวยการสถานศึกษา', name: 'ผู้อำนวยการสถานศึกษา' }
             ],
             activeTab: 0
         };
 
+        window.verifyAccessPin = function() {
+            var enteredPin = document.getElementById('access-pin-input').value.trim();
+            if(window.appState && enteredPin === window.appState.systemPin) {
+                document.getElementById('pin-lock-screen').classList.add('hidden');
+                document.getElementById('login-modal').classList.remove('hidden');
+            } else {
+                var err = document.getElementById('pin-error-msg');
+                err.classList.remove('hidden');
+                document.getElementById('access-pin-input').value = '';
+            }
+        };
+
         window.handleLogin = function(event) {
             event.preventDefault();
-            const u = document.getElementById('login-username').value.trim();
-            const p = document.getElementById('login-password').value.trim();
-            const found = window.appState.users.find(x => x.username === u && x.pass === p);
+            var u = document.getElementById('login-username').value.trim();
+            var p = document.getElementById('login-password').value.trim();
+            var found = null;
+            if(window.appState && window.appState.users) {
+                for(var i=0; i<window.appState.users.length; i++) {
+                    if(window.appState.users[i].username === u && window.appState.users[i].pass === p) {
+                        found = window.appState.users[i];
+                        break;
+                    }
+                }
+            }
             if(found) {
                 window.appState.currentUser = found;
                 document.getElementById('login-modal').classList.add('hidden');
-                document.getElementById('app-main').classList.remove('hidden');
-                document.getElementById('current-user-badge').innerHTML = `<i class="fa-solid fa-user-shield mr-1"></i> ${found.name} (${found.role})`;
-                initCloudSync();
-                renderActiveTab();
+                
+                var isGenericName = (found.name === 'ผู้ดูแลระบบสูงสุด' || found.name === 'เจ้าหน้าที่การเงิน' || found.name === 'เจ้าหน้าที่พัสดุ' || found.name === 'ผู้อำนวยการสถานศึกษา');
+                document.getElementById('setup-fullname').value = isGenericName ? '' : found.name;
+                document.getElementById('setup-position').value = found.role || '';
+                document.getElementById('profile-setup-modal').classList.remove('hidden');
             } else {
-                const err = document.getElementById('login-error');
+                var err = document.getElementById('login-error');
                 err.innerText = "❌ ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง (ค่าเริ่มต้น: admin / Admin1234)";
                 err.classList.remove('hidden');
             }
         };
+
+        window.saveUserProfileSetup = function(event) {
+            event.preventDefault();
+            var fn = document.getElementById('setup-fullname').value.trim();
+            var pos = document.getElementById('setup-position').value.trim();
+            if(fn && pos && window.appState && window.appState.currentUser) {
+                window.appState.currentUser.name = fn;
+                window.appState.currentUser.role = pos;
+                
+                // บันทึก Audit Log การเข้าสู่ระบบ
+                window.appState.auditLogs.unshift({
+                    timestamp: new Date().toLocaleString('th-TH'),
+                    username: window.appState.currentUser.username,
+                    name: fn,
+                    role: pos,
+                    action: 'เข้าสู่ระบบสำเร็จ'
+                });
+
+                document.getElementById('profile-setup-modal').classList.add('hidden');
+                completeLoginSuccess(window.appState.currentUser);
+            } else {
+                alert("กรุณากรอกชื่อ-นามสกุลและตำแหน่งให้ครบถ้วน");
+            }
+        };
+
+        function completeLoginSuccess(user) {
+            document.getElementById('app-main').classList.remove('hidden');
+            document.getElementById('current-user-badge').innerHTML = `<i class="fa-solid fa-user-shield mr-1"></i> ${user.name} (${user.role})`;
+            renderActiveTab();
+        }
 
         window.handleLogout = function() {
             window.appState.currentUser = null;
             document.getElementById('login-modal').classList.remove('hidden');
             document.getElementById('app-main').classList.add('hidden');
             document.getElementById('login-password').value = '';
+            document.getElementById('access-pin-input').value = '';
+            document.getElementById('pin-lock-screen').classList.remove('hidden');
         };
 
         window.requestPasswordReset = function() {
-            alert("ระบบได้ส่งคำขอรีเซ็ตรหัสผ่านไปยังผู้ดูแลระบบสูงสุด (Super Admin) เรียบร้อยแล้ว กรุณาติดต่อผู้ดูแลระบบเพื่อตั้งรหัสใหม่เป็น Admin1234");
+            alert("ระบบได้ส่งคำขอรีเซ็ตรหัสผ่านไปยังผู้ดูแลระบบสูงสุด (Super Admin) เรียบร้อยแล้ว กรุณาติดต่อผู้ดูแลระบบ");
         };
-
-        async function initCloudSync() {
-            if(!db) return;
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'school_erp_state');
-                onSnapshot(docRef, (snap) => {
-                    if(snap.exists()) {
-                        const cloudData = snap.data();
-                        if(cloudData && cloudData.orgConfig) {
-                            window.appState.orgConfig = cloudData.orgConfig;
-                            window.appState.budgets = cloudData.budgets || window.appState.budgets;
-                            window.appState.egpList = cloudData.egpList || window.appState.egpList;
-                            document.getElementById('top-school-name').innerText = window.appState.orgConfig.schoolName;
-                            renderActiveTab();
-                        }
-                    }
-                }, (err) => console.log("Cloud sync error:", err));
-            } catch(e) {
-                console.log("Firebase init skipped/offline:", e);
-            }
-        }
-
-        async function saveToCloud() {
-            if(!db) return;
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'school_erp_state');
-                await setDoc(docRef, window.appState);
-            } catch(e) {
-                console.log("Save to cloud failed:", e);
-            }
-        }
 
         window.switchTab = function(index) {
             window.appState.activeTab = index;
@@ -386,18 +417,38 @@
                     </div>
                 `;
             } else if(tab === 9) {
+                let auditRows = window.appState.auditLogs.length > 0 ? window.appState.auditLogs.map(log => `
+                    <tr class="border-b border-slate-100 text-xs">
+                        <td class="px-3 py-2 font-mono text-slate-500">${log.timestamp}</td>
+                        <td class="px-3 py-2 font-semibold text-emerald-700">${log.name}</td>
+                        <td class="px-3 py-2 text-slate-600">${log.role}</td>
+                        <td class="px-3 py-2 text-slate-600">Username: <code>${log.username}</code></td>
+                        <td class="px-3 py-2"><span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded font-semibold">${log.action}</span></td>
+                    </tr>
+                `).join('') : `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 text-xs">ยังไม่มีประวัติการเข้าสู่ระบบในเซสชันนี้</td></tr>`;
+
                 container.innerHTML = `
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-                        <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-users-gear text-emerald-600 mr-2"></i> ตั้งค่าข้อมูลหน่วยงาน & ระบบผู้ใช้งาน</h2>
-                        <p class="text-xs text-slate-500">กำหนดชื่อโรงเรียน รหัสสถานศึกษา และ Username/Password สำหรับเจ้าหน้าที่ในการเข้าสู่ระบบ</p>
-                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                            <h3 class="font-bold text-sm text-slate-700 mb-2">บัญชีผู้ใช้งานปัจจุบัน (Active Users)</h3>
-                            <ul class="text-xs text-slate-600 space-y-1">
-                                <li>• <b>admin</b> (ผู้ดูแลระบบสูงสุด) - รหัสผ่าน: Admin1234</li>
-                                <li>• <b>finance</b> (เจ้าหน้าที่การเงิน) - รหัสผ่าน: Admin1234</li>
-                                <li>• <b>procurement</b> (เจ้าหน้าที่พัสดุ) - รหัสผ่าน: Admin1234</li>
-                                <li>• <b>director</b> (ผู้อำนวยการ) - รหัสผ่าน: Admin1234</li>
-                            </ul>
+                    <div class="space-y-6">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                            <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-users-gear text-emerald-600 mr-2"></i> ตั้งค่าข้อมูลหน่วยงาน & ตรวจสอบประวัติการเข้าใช้งาน (Audit Log)</h2>
+                            <p class="text-xs text-slate-500">ตรวจสอบว่าใครเข้าสู่ระบบ ชื่ออะไร และเข้าใช้งานเวลาใด เพื่อความโปร่งใสในการตรวจสอบ</p>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-6">
+                            <h3 class="font-bold text-sm text-slate-800 mb-3"><i class="fa-solid fa-clipboard-user text-emerald-600 mr-2"></i> ประวัติการเข้าใช้งานล่าสุด (Audit Trail)</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase">
+                                            <th class="px-3 py-2 font-semibold">เวลาเข้าสู่ระบบ</th>
+                                            <th class="px-3 py-2 font-semibold">ชื่อ - นามสกุลจริง</th>
+                                            <th class="px-3 py-2 font-semibold">ตำแหน่ง</th>
+                                            <th class="px-3 py-2 font-semibold">ชื่อผู้ใช้ (Username)</th>
+                                            <th class="px-3 py-2 font-semibold">สถานะ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${auditRows}</tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -432,7 +483,6 @@
                 edits: 0,
                 photos: []
             });
-            saveToCloud();
             renderActiveTab();
             alert("เพิ่มโครงการจัดซื้อจัดจ้างใหม่เรียบร้อยแล้ว!");
         };
@@ -441,7 +491,6 @@
             const item = window.appState.egpList[idx];
             const newTitle = prompt("แก้ไขชื่อโครงการ:", item.title);
             if(newTitle) item.title = newTitle;
-            saveToCloud();
             renderActiveTab();
         };
 
@@ -450,7 +499,6 @@
             if(name) {
                 window.appState.orgConfig.schoolName = name;
                 document.getElementById('top-school-name').innerText = name;
-                saveToCloud();
                 alert("บันทึกการตั้งค่าหน่วยงานเรียบร้อยแล้ว!");
             }
         };
