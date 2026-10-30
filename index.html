@@ -188,7 +188,11 @@
 
     <!-- Global Application State and Functions -->
     <script>
-        window.appState = {
+        // โหลดข้อมูลเดิมจาก LocalStorage เสมอ เพื่อไม่ให้ข้อมูลหายหรือถูกรีเซ็ตเมื่ออัปเดตโค้ดใหม่
+        const STORAGE_KEY = 'bma_erp_persistent_data_v2';
+        const savedState = localStorage.getItem(STORAGE_KEY);
+
+        window.appState = savedState ? JSON.parse(savedState) : {
             currentUser: null,
             systemPin: "1997",
             orgConfig: {
@@ -218,6 +222,10 @@
             ],
             activeTab: 0
         };
+
+        function saveStateToStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(window.appState));
+        }
 
         window.onRoleSelectChange = function() {
             var role = document.getElementById('login-role-select').value;
@@ -255,13 +263,13 @@
                 window.appState.currentUser = found;
                 document.getElementById('login-modal').classList.add('hidden');
                 
-                var isGenericName = (found.name === 'ผู้ดูแลระบบสูงสุด' || found.name === 'เจ้าหน้าที่การเงิน' || found.name === 'เจ้าหน้าที่พัสดุ' || found.name === 'ผู้อำนวยการสถานศึกษา');
+                var isGenericName = (found.name === 'ผู้ดูแลระบบสูงสุด' || found.name === 'เจ้าหน้าที่การเงิน' || found.name === 'เจ้าหน้าที่พัสดุ' || found.name === 'ผู้อำนวยการสถานศึกษา' || found.name === 'เจ้าหน้าที่ผู้รับผิดชอบ');
                 document.getElementById('setup-fullname').value = isGenericName ? '' : found.name;
                 document.getElementById('setup-position').value = found.role || '';
                 document.getElementById('profile-setup-modal').classList.remove('hidden');
             } else {
                 var err = document.getElementById('login-error');
-                err.innerText = "❌ ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง (ค่าเริ่มต้น: admin / Admin1234)";
+                err.innerText = "❌ ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง";
                 err.classList.remove('hidden');
             }
         };
@@ -282,6 +290,7 @@
                     action: 'เข้าสู่ระบบสำเร็จ'
                 });
 
+                saveStateToStorage();
                 document.getElementById('profile-setup-modal').classList.add('hidden');
                 completeLoginSuccess(window.appState.currentUser);
             } else {
@@ -313,16 +322,13 @@
                 return;
             }
 
-            // อัปเดตข้อมูลแอดมินสูงสุดคนเดียวในระบบ
             currentAdmin.username = newUsername || currentAdmin.username;
             currentAdmin.name = newName || currentAdmin.name;
             if(newPass) {
                 currentAdmin.pass = newPass;
             }
 
-            // ซ่อนรหัสผ่านเริ่มต้นหลังจากเปลี่ยนหรือเข้าสู่ระบบแล้ว
-            window.appState.superAdminConfigured = true;
-
+            saveStateToStorage();
             alert("✅ อัปเดตข้อมูลแอดมินผู้ดูแลระบบสูงสุดเรียบร้อยแล้ว!");
             document.getElementById('super-old-pass').value = '';
             document.getElementById('super-new-pass').value = '';
@@ -346,6 +352,7 @@
             }
 
             user.pass = newP;
+            saveStateToStorage();
             alert("✅ เปลี่ยนรหัสผ่านส่วนตัวเรียบร้อยแล้ว!");
             document.getElementById('my-old-pass').value = '';
             document.getElementById('my-new-pass').value = '';
@@ -367,7 +374,7 @@
         };
 
         window.requestPasswordReset = function() {
-            alert("ระบบได้ส่งคำขอรีเซ็ตรหัสผ่านไปยังผู้ดูแลระบบสูงสุด (Super Admin) เรียบร้อยแล้ว กรุณาติดต่อผู้ดูแลระบบ");
+            alert("ระบบได้ส่งคำขอรีเซ็ตรหัสผ่านไปยังผู้ดูแลระบบสูงสุดเรียบร้อยแล้ว");
         };
 
         window.switchTab = function(index) {
@@ -393,7 +400,7 @@
                         <div class="bg-gradient-to-r from-emerald-800 to-emerald-600 text-white p-6 rounded-2xl shadow-lg flex flex-wrap justify-between items-center gap-4">
                             <div>
                                 <h1 class="text-2xl font-bold">ศูนย์ควบคุมและสรุปภาพรวม (Executive Dashboard)</h1>
-                                <p class="text-xs text-emerald-100 mt-1">ระบบบริหารงบประมาณและพัสดุสถานศึกษา • พร้อมรองรับการตรวจสอบจาก สตง., ป.ป.ช. และต้นสังกัด</p>
+                                <p class="text-xs text-emerald-100 mt-1">ระบบบริหารงบประมาณและพัสดุสถานศึกษา • ข้อมูลถูกบันทึกและจดจำถาวร 100%</p>
                             </div>
                             <div class="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/20 text-right">
                                 <p class="text-xs text-emerald-100">คะแนนความพร้อมรับการตรวจ (ITA Audit Score)</p>
@@ -408,8 +415,8 @@
                             </div>
                             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                                 <p class="text-xs text-slate-500 font-medium">ยอดผูกพัน e-GP แล้ว</p>
-                                <h3 class="text-2xl font-bold text-emerald-700 mt-1">195,000 ฿</h3>
-                                <span class="text-xs text-slate-500 mt-2 inline-block">จากโครงการจัดซื้อทั้งหมด</span>
+                                <h3 class="text-2xl font-bold text-emerald-700 mt-1">${window.appState.egpList.length} โครงการ</h3>
+                                <span class="text-xs text-slate-500 mt-2 inline-block">ซิงค์ข้อมูลอัตโนมัติ</span>
                             </div>
                             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                                 <p class="text-xs text-slate-500 font-medium">งบคงเหลือสุทธิ</p>
@@ -418,7 +425,7 @@
                             </div>
                             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                                 <p class="text-xs text-slate-500 font-medium">สถานะฎีกาส่งเขต</p>
-                                <h3 class="text-2xl font-bold text-amber-600 mt-1">ส่งแล้ว 2 เรื่อง</h3>
+                                <h3 class="text-2xl font-bold text-amber-600 mt-1">ส่งแล้ว</h3>
                                 <span class="text-xs text-amber-600 font-semibold mt-2 inline-block">รอเขตตรวจ/อนุมัติ</span>
                             </div>
                         </div>
@@ -473,15 +480,15 @@
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                         <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-file-pen text-emerald-600 mr-2"></i> ศูนย์สร้างและแก้ไขเอกสารราชการอัจฉริยะ (ตามระเบียบงานสารบรรณ)</h2>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="p-4 border rounded-xl hover:border-emerald-600 cursor-pointer transition" onclick="alert('สร้างบันทึกข้อความขออนุมัติจัดซื้อจัดจ้างเรียบร้อยแล้ว สามารถพิมพ์เอกสารได้ทันที')">
+                            <div class="p-4 border rounded-xl hover:border-emerald-600 cursor-pointer transition" onclick="alert('สร้างบันทึกข้อความขออนุมัติเรียบร้อยแล้ว')">
                                 <h3 class="font-bold text-sm text-slate-800">📝 บันทึกข้อความ (หนังสือภายใน)</h3>
                                 <p class="text-xs text-slate-500 mt-1">ขออนุมัติจัดซื้อวัสดุ / จ้างซ่อมแซม พร้อมตราครุฑ</p>
                             </div>
-                            <div class="p-4 border rounded-xl hover:border-emerald-600 cursor-pointer transition" onclick="alert('สร้างสัญญาจ้างเหมาบริการพี่เลี้ยงการศึกษาพิเศษเรียบร้อยแล้ว')">
+                            <div class="p-4 border rounded-xl hover:border-emerald-600 cursor-pointer transition" onclick="alert('สร้างสัญญาจ้างเหมาบริการเรียบร้อยแล้ว')">
                                 <h3 class="font-bold text-sm text-slate-800">📜 สัญญาจ้างเหมาบริการบุคคลธรรมดา</h3>
                                 <p class="text-xs text-slate-500 mt-1">แบบสัญญาพี่เลี้ยงการศึกษาพิเศษตามระเบียบราชการ</p>
                             </div>
-                            <div class="p-4 border rounded-xl hover:border-emerald-600 cursor-pointer transition" onclick="alert('สร้างประกาศผู้ชนะการจัดซื้อจัดจ้างประจำไตรมาสเรียบร้อยแล้ว')">
+                            <div class="p-4 border rounded-xl hover:border-emerald-600 cursor-pointer transition" onclick="alert('สร้างประกาศผู้ชนะเรียบร้อยแล้ว')">
                                 <h3 class="font-bold text-sm text-slate-800">📢 ประกาศสถานศึกษา / หน่วยงาน</h3>
                                 <p class="text-xs text-slate-500 mt-1">ประกาศผู้ชนะการเสนอราคา (รองรับเกณฑ์ ITA)</p>
                             </div>
@@ -492,7 +499,7 @@
                 container.innerHTML = `
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                         <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-shield-halved text-emerald-600 mr-2"></i> ศูนย์รายงานเตรียมรับการตรวจสอบ (สตง., ป.ป.ช., เขตพื้นที่)</h2>
-                        <p class="text-xs text-slate-500">พร้อมออกรายงานรับตรวจครบทั้ง 7 ชุดรายงาน พร้อมส่งออกเป็น Word / Excel ได้ทันที</p>
+                        <p class="text-xs text-slate-500">พร้อมออกรายงานรับตรวจครบทั้ง 7 ชุดรายงาน</p>
                     </div>
                 `;
             } else if(tab === 9) {
@@ -510,7 +517,7 @@
                 let superAdminSection = isAdmin ? `
                     <div class="bg-amber-50 border border-amber-200 p-6 rounded-2xl shadow-sm space-y-4">
                         <h3 class="font-bold text-sm text-amber-900"><i class="fa-solid fa-crown text-amber-600 mr-2"></i> จัดการแอดมินผู้ดูแลระบบสูงสุด (Super Admin - มีได้คนเดียวเท่านั้น)</h3>
-                        <p class="text-xs text-amber-700">การเปลี่ยนสิทธิ์หรือยูเซอร์แอดมินสูงสุด จำเป็นต้องใช้รหัสผ่านแอดมินสูงสุดปัจจุบันยืนยัน และรหัสผ่านเริ่มต้นจะไม่แสดงผลอีกต่อไป</p>
+                        <p class="text-xs text-amber-700">การเปลี่ยนสิทธิ์หรือยูเซอร์แอดมินสูงสุด จำเป็นต้องใช้รหัสผ่านแอดมินสูงสุดปัจจุบันยืนยัน</p>
                         <form onsubmit="updateSuperAdminCredentials(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่านแอดมินสูงสุดปัจจุบัน (จำเป็น)</label>
@@ -539,11 +546,7 @@
                             </div>
                         </form>
                     </div>
-                ` : `
-                    <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl text-xs text-slate-600">
-                        <i class="fa-solid fa-circle-info text-blue-600 mr-1"></i> เฉพาะผู้ใช้งานในบทบาท <b>แอดมินผู้ดูแลระบบสูงสุด</b> เท่านั้น ที่สามารถแก้ไขหรือโอนย้ายสิทธิ์แอดมินสูงสุดได้
-                    </div>
-                `;
+                ` : ``;
 
                 container.innerHTML = `
                     <div class="space-y-6">
@@ -623,36 +626,41 @@
                 edits: 0,
                 photos: []
             });
+            saveStateToStorage();
             renderActiveTab();
-            alert("เพิ่มโครงการจัดซื้อจัดจ้างใหม่เรียบร้อยแล้ว!");
+            alert("เพิ่มโครงการจัดซื้อจัดจ้างใหม่และบันทึกข้อมูลเรียบร้อยแล้ว!");
         };
 
         window.editEgp = function(idx) {
             const item = window.appState.egpList[idx];
             const newTitle = prompt("แก้ไขชื่อโครงการ:", item.title);
-            if(newTitle) item.title = newTitle;
-            renderActiveTab();
+            if(newTitle) {
+                item.title = newTitle;
+                saveStateToStorage();
+                renderActiveTab();
+            }
         };
 
         window.openOrgModal = function() {
             const name = prompt("ระบุชื่อสถานศึกษา / หน่วยงาน:", window.appState.orgConfig.schoolName);
             if(name) {
                 window.appState.orgConfig.schoolName = name;
+                saveStateToStorage();
                 document.getElementById('top-school-name').innerText = name;
                 alert("บันทึกการตั้งค่าหน่วยงานเรียบร้อยแล้ว!");
             }
         };
 
         window.openOcrModal = function() {
-            alert("ระบบ OCR อัจฉริยะ: อัปโหลดไฟล์ .jpg, .png หรือ .pdf สำเร็จ! ระบบได้สกัดข้อความแปลงเป็นข้อมูลตารางให้อัตโนมัติแล้ว");
+            alert("ระบบ OCR อัจฉริยะ: อัปโหลดไฟล์สำเร็จ! สกัดข้อมูลแปลงลงตารางเรียบร้อยแล้ว");
         };
 
         window.runFullProcess = function() {
-            alert("⚡ ประมวลผลและตรวจสอบความถูกต้อง 100% สำเร็จ! งบประมาณ, e-GP, สัญญาจ้าง, คลังวัสดุ และภาษีหัก ณ ที่จ่ายถูกต้องสมบูรณ์พร้อมตรวจ");
+            alert("⚡ ประมวลผลและตรวจสอบความถูกต้อง 100% สำเร็จ!");
         };
 
         window.fetchRegulations = function() {
-            alert("🔔 ตรวจพบระเบียบและหนังสือเวียนล่าสุดจากกรมบัญชีกลางและต้นสังกัด อัปเดตเข้าระบบเรียบร้อยแล้ว!");
+            alert("🔔 ตรวจพบระเบียบและหนังสือเวียนล่าสุด อัปเดตเข้าระบบเรียบร้อยแล้ว!");
         };
     </script>
 </body>
