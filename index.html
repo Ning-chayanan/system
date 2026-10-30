@@ -80,12 +80,12 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">ชื่อผู้ใช้งาน (Username)</label>
-                    <input type="text" id="login-username" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-600 text-sm bg-slate-50" value="admin" readonly>
+                    <input type="text" id="login-username" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-600 text-sm bg-slate-50" placeholder="ระบุชื่อผู้ใช้งาน">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">รหัสผ่าน (Password)</label>
                     <div class="relative">
-                        <input type="password" id="login-password" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-600 text-sm bg-slate-50 pr-12" placeholder="ระบุรหัสผ่าน (ค่าเริ่มต้น: Admin1234)">
+                        <input type="password" id="login-password" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-600 text-sm bg-slate-50 pr-12" placeholder="ระบุรหัสผ่านของคุณ">
                         <button type="button" onclick="togglePasswordVisibility('login-password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-2">
                             <i class="fa-solid fa-eye text-sm"></i>
                         </button>
@@ -243,8 +243,8 @@
     <!-- Global Application State and Functions -->
     <script>
         // โหลดข้อมูลเดิมจาก LocalStorage เสมอ พร้อมระบบป้องกันข้อมูลสูญหาย 100% (Persistent Anti-Wipe Storage Protection)
-        const STORAGE_KEY = 'bma_erp_persistent_data_v3';
-        const SESSION_LOGIN_KEY = 'bma_erp_session_login_v3';
+        const STORAGE_KEY = 'bma_erp_persistent_data_v4';
+        const SESSION_LOGIN_KEY = 'bma_erp_session_login_v4';
         
         const savedState = localStorage.getItem(STORAGE_KEY);
         const sessionBackup = sessionStorage.getItem(STORAGE_KEY + '_session_backup');
@@ -283,19 +283,38 @@
             activeTab: 0
         };
 
-        // ตรวจสอบระบบล็อกเอาต์อัตโนมัติทุก 24 ชั่วโมง (24-Hour Auto-Logout Session Security Timer)
+        // ตรวจสอบและประมวลผลข้อมูลความถูกต้องล่วงหน้า พร้อมผสานข้อมูลเดิมหากมีการอัปเดตโค้ด
+        function preflightDataSanitization() {
+            if (savedState) {
+                try {
+                    const parsed = JSON.parse(savedState);
+                    if (parsed && parsed.users) {
+                        // คงค่ารายชื่อผู้ใช้ที่แอดมินเคยเปลี่ยนไว้ ไม่ให้ถูกรีเซ็ตทับ
+                        window.appState.users = parsed.users;
+                    }
+                    if (parsed && parsed.budgets) window.appState.budgets = parsed.budgets;
+                    if (parsed && parsed.egpList) window.appState.egpList = parsed.egpList;
+                    if (parsed && parsed.auditLogs) window.appState.auditLogs = parsed.auditLogs;
+                    if (parsed && parsed.orgConfig) window.appState.orgConfig = parsed.orgConfig;
+                } catch(e) {
+                    console.error("Sanitization error:", e);
+                }
+            }
+            saveStateToStorage();
+        }
+        preflightDataSanitization();
+
+        // ตรวจสอบระบบล็อกเอาต์อัตโนมัติทุก 24 ชั่วโมง และสถานะเซสชันปัจจุบัน
         const nowTime = new Date().getTime();
         const activeSessionUser = sessionStorage.getItem(SESSION_LOGIN_KEY);
         const sessionTimeKey = 'bma_erp_session_time';
         const loginTime = localStorage.getItem(sessionTimeKey);
 
         if (loginTime && (nowTime - parseInt(loginTime) > 24 * 60 * 60 * 1000)) {
-            // หมดเวลา 24 ชม. บังคับล็อกเอาต์เพื่อความปลอดภัย
             window.appState.currentUser = null;
             localStorage.removeItem(sessionTimeKey);
             sessionStorage.removeItem(SESSION_LOGIN_KEY);
         } else if (activeSessionUser && window.appState.users) {
-            // พยายามกู้คืนผู้ใช้ปัจจุบันในเซสชันเดิม
             let foundUsr = window.appState.users.find(u => u.username === activeSessionUser);
             if (foundUsr) {
                 window.appState.currentUser = foundUsr;
@@ -322,146 +341,17 @@
                 document.getElementById('pin-lock-screen').classList.add('hidden');
                 document.getElementById('login-modal').classList.add('hidden');
                 completeLoginSuccess(window.appState.currentUser);
-            }
-        };
-
-        window.openBackupRestoreModal = function() {
-            document.getElementById('backup-restore-modal').classList.remove('hidden');
-        };
-
-        window.closeBackupRestoreModal = function() {
-            document.getElementById('backup-restore-modal').classList.add('hidden');
-        };
-
-        window.downloadJsonBackup = function() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.appState, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "bma_erp_backup_" + new Date().toISOString().slice(0,10) + ".json");
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-            alert("✅ ดาวน์โหลดไฟล์สำรองข้อมูล (JSON Backup) สำเร็จเรียบร้อยแล้ว!");
-        };
-
-        window.restoreJsonBackup = function(event) {
-            const file = event.target.files[0];
-            if(!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const parsed = JSON.parse(e.target.result);
-                    if(parsed && parsed.budgets && parsed.egpList) {
-                        // เซฟทับข้อมูลเดิมทันทีแบบสมบูรณ์
-                        window.appState = parsed;
-                        saveStateToStorage();
-                        
-                        // ปิด Modal สำรองข้อมูล
-                        closeBackupRestoreModal();
-                        
-                        // รีเฟรชหน้าจอและอัปเดตข้อมูล UI ทันทีโดยไม่ต้องกดรีเฟรชเบราว์เซอร์เอง
-                        if(window.appState.currentUser) {
-                            completeLoginSuccess(window.appState.currentUser);
-                        } else {
-                            renderActiveTab();
-                        }
-                        
-                        alert("✅ นำเข้าข้อมูลและเซฟทับข้อมูลเดิมสำเร็จเรียบร้อยแล้ว! ข้อมูลทั้งหมดถูกอัปเดตบนหน้าจอทันที");
-                    } else {
-                        alert("❌ รูปแบบไฟล์สำรองข้อมูลไม่ถูกต้อง");
-                    }
-                } catch(err) {
-                    alert("❌ เกิดข้อผิดพลาดในการอ่านไฟล์ JSON: " + err.message);
-                }
-            };
-            reader.readAsText(file);
-        };
-
-        window.resetSystemData = function() {
-            if(confirm("⚠️ คำเตือน: คุณแน่ใจหรือไม่ที่จะรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้น? ข้อมูลที่แก้ไขไปจะหายไปทั้งหมด!")) {
-                localStorage.removeItem(STORAGE_KEY);
-                sessionStorage.clear();
-                alert("🔄 รีเซ็ตข้อมูลเรียบร้อยแล้ว ระบบจะเริ่มต้นใหม่");
-                location.reload();
-            }
-        };
-
-        window.onRoleSelectChange = function() {
-            var role = document.getElementById('login-role-select').value;
-            document.getElementById('login-username').value = role;
-        };
-
-        window.verifyAccessPin = function() {
-            var enteredPin = document.getElementById('access-pin-input').value.trim();
-            if(window.appState && enteredPin === window.appState.systemPin) {
-                document.getElementById('pin-lock-screen').classList.add('hidden');
-                document.getElementById('login-modal').classList.remove('hidden');
-                document.getElementById('login-role-select').value = 'admin';
-                document.getElementById('login-username').value = 'admin';
             } else {
-                var err = document.getElementById('pin-error-msg');
-                err.classList.remove('hidden');
-                document.getElementById('access-pin-input').value = '';
-            }
-        };
-
-        window.handleLogin = function(event) {
-            event.preventDefault();
-            var u = document.getElementById('login-username').value.trim();
-            var p = document.getElementById('login-password').value.trim();
-            var found = null;
-            if(window.appState && window.appState.users) {
-                for(var i=0; i<window.appState.users.length; i++) {
-                    if(window.appState.users[i].username === u && window.appState.users[i].pass === p) {
-                        found = window.appState.users[i];
-                        break;
-                    }
-                }
-            }
-            if(found) {
-                window.appState.currentUser = found;
+                document.getElementById('pin-lock-screen').classList.remove('hidden');
                 document.getElementById('login-modal').classList.add('hidden');
-                
-                var isGenericName = (found.name === 'ผู้ดูแลระบบสูงสุด' || found.name === 'เจ้าหน้าที่การเงิน' || found.name === 'เจ้าหน้าที่พัสดุ' || found.name === 'ผู้อำนวยการสถานศึกษา' || found.name === 'เจ้าหน้าที่ผู้รับผิดชอบ');
-                document.getElementById('setup-fullname').value = isGenericName ? '' : found.name;
-                document.getElementById('setup-position').value = found.role || '';
-                document.getElementById('profile-setup-modal').classList.remove('hidden');
-            } else {
-                var err = document.getElementById('login-error');
-                err.innerText = "❌ ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง";
-                err.classList.remove('hidden');
-            }
-        };
-
-        window.saveUserProfileSetup = function(event) {
-            event.preventDefault();
-            var fn = document.getElementById('setup-fullname').value.trim();
-            var pos = document.getElementById('setup-position').value.trim();
-            if(fn && pos && window.appState && window.appState.currentUser) {
-                window.appState.currentUser.name = fn;
-                window.appState.currentUser.role = pos;
-                
-                window.appState.auditLogs.unshift({
-                    timestamp: new Date().toLocaleString('th-TH'),
-                    username: window.appState.currentUser.username,
-                    name: fn,
-                    role: pos,
-                    action: 'เข้าสู่ระบบสำเร็จ'
-                });
-
-                saveStateToStorage();
-                document.getElementById('profile-setup-modal').classList.add('hidden');
-                completeLoginSuccess(window.appState.currentUser);
-            } else {
-                alert("กรุณากรอกชื่อ-นามสกุลและตำแหน่งให้ครบถ้วน");
             }
         };
 
         window.updateSuperAdminCredentials = function(event) {
             event.preventDefault();
             var currentAdmin = window.appState.currentUser;
-            if(!currentAdmin || currentAdmin.username !== 'admin') {
-                alert("❌ เฉพาะแอดมินผู้ดูแลระบบสูงสุด (Super Admin) เท่านั้นที่มีสิทธิ์เปลี่ยนผู้ดูแลระบบหรือรหัสผ่านสูงสุด!");
+            if(!currentAdmin || (currentAdmin.username !== 'admin' && !currentAdmin.role.includes('แอดมิน'))) {
+                alert("❌ เฉพาะแอดมินผู้ดูแลระบบสูงสุดเท่านั้นที่มีสิทธิ์เปลี่ยนผู้ดูแลระบบหรือรหัสผ่านสูงสุด!");
                 return;
             }
 
@@ -487,8 +377,22 @@
                 currentAdmin.pass = newPass;
             }
 
+            // บันทึกอัปเดตลงในอาเรย์ users ด้วย
+            let adminIndex = window.appState.users.findIndex(u => u.role.includes('แอดมิน') || u.username === currentAdmin.username);
+            if(adminIndex !== -1) {
+                window.appState.users[adminIndex] = currentAdmin;
+            }
+
+            window.appState.auditLogs.unshift({
+                timestamp: new Date().toLocaleString('th-TH'),
+                username: currentAdmin.username,
+                name: currentAdmin.name,
+                role: 'แอดมินผู้ดูแลระบบสูงสุด',
+                action: 'อัปเดตข้อมูลผู้ดูแลระบบสูงสุด'
+            });
+
             saveStateToStorage();
-            alert("✅ อัปเดตข้อมูลแอดมินผู้ดูแลระบบสูงสุดเรียบร้อยแล้ว!");
+            alert("✅ อัปเดตข้อมูลแอดมินผู้ดูแลระบบสูงสุดเรียบร้อยแล้ว! ระบบจดจำข้อมูลและการตั้งค่าถาวร");
             document.getElementById('super-old-pass').value = '';
             document.getElementById('super-new-pass').value = '';
             document.getElementById('super-confirm-pass').value = '';
@@ -517,21 +421,24 @@
             document.getElementById('my-new-pass').value = '';
         };
 
-        function completeLoginSuccess(user) {
+        window.completeLoginSuccess = function(user) {
             document.getElementById('app-main').classList.remove('hidden');
             document.getElementById('current-user-badge').innerHTML = `<i class="fa-solid fa-user-shield mr-1"></i> ${user.name} (${user.role})`;
             renderActiveTab();
-        }
+        };
 
         window.handleLogout = function() {
             window.appState.currentUser = null;
             localStorage.removeItem('bma_erp_session_time');
             sessionStorage.removeItem(SESSION_LOGIN_KEY);
-            document.getElementById('login-modal').classList.remove('hidden');
+            document.getElementById('login-modal').classList.add('hidden');
             document.getElementById('app-main').classList.add('hidden');
             document.getElementById('login-password').value = '';
             document.getElementById('access-pin-input').value = '';
-            document.getElementById('pin-lock-screen').classList.remove('hidden');
+            // หลังจากออกจากระบบ ให้กลับมาแสดงหน้าจอ Login ทันทีโดยใช้ยูเซอร์และรหัสผ่านที่อัปเดตล่าสุด
+            document.getElementById('pin-lock-screen').classList.add('hidden');
+            document.getElementById('login-modal').classList.remove('hidden');
+            onRoleSelectChange();
         };
 
         window.requestPasswordReset = function() {
